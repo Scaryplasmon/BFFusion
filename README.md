@@ -1,4 +1,4 @@
-# Bfusion
+# Bffusion
 Integrating diffusers functionalities in Blender
 
 Grease Pencil integration
