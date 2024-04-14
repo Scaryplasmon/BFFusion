@@ -36,6 +36,7 @@ from diffusers import (
     DPMSolverMultistepScheduler,
     LCMScheduler, 
     UniPCMultistepScheduler,
+    AutoencoderKL
 )
 
 import torch
@@ -43,6 +44,9 @@ import numpy as np
 import threading
 print(torch.cuda.is_available())
 
+
+# params
+pipeline_instance = None
 
 class BlenderDiffusionProperties(bpy.types.PropertyGroup):
     sd15: bpy.props.StringProperty(
@@ -86,10 +90,21 @@ class BlenderDiffusionProperties(bpy.types.PropertyGroup):
         description="Enable FreeU",
         default=False
     ) # type: ignore
+    use_loaded: bpy.props.BoolProperty(
+        name="use_loaded",
+        description="use_loaded",
+        default=False
+    ) # type: ignore
     diffusion_scheduler: bpy.props.EnumProperty(
         name="Scheduler",
         description="Choose the scheduler",
         items=[('LCM', "LCM", ""),
+               ('DDIM', "DDIM", ""),
+               ('DDPM', "DDPM", ""),
+               ('PNDMS', "PNDMS", ""),
+               ('LMS', "LMSDiscrete", ""),
+               ('EulerAncestral', "EulerAncestral", ""),
+               ('DPMSolverMultistep', "DPMSolverMultistep", ""),
                ('UNIPC', "UniPC", "")]
     ) # type: ignore
     diffusion_device: bpy.props.EnumProperty(
@@ -165,6 +180,7 @@ class BlenderDiffusionPanel(bpy.types.Panel):
         layout.prop(scene, "sdxl")
         layout.prop(scene, "lora_id")
         layout.prop(scene, "FreeU")
+        layout.prop(scene, "use_loaded")
         layout.prop(scene, "diffusion_scheduler")
         layout.prop(scene, "diffusion_device")
         layout.prop(scene, "diffusion_input_image_path")
@@ -188,6 +204,8 @@ class BlenderDiffusionGenerateOperator(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.sd15
+        global pipeline_instance
+
         context.scene.render.image_settings.file_format = 'PNG'
         print("Rendering Image...")
         
@@ -203,14 +221,19 @@ class BlenderDiffusionGenerateOperator(bpy.types.Operator):
         bpy.ops.render.render(write_still=True)
 
         props.diffusion_input_image_path = full_path
+        if props.use_loaded == False:
+            pipeline_instance = setup_pipeline(props.diffusion_device.lower(), props.diffusion_scheduler, props.sd15, props.sd15_bool, props.ctrl_net, props.ctrl_net_bool, props.sdxl, props.sdxl_bool, props.FreeU, props.lora_id)
+        elif pipeline_instance == None:
+            pipeline_instance = setup_pipeline(props.diffusion_device.lower(), props.diffusion_scheduler, props.sd15, props.sd15_bool, props.ctrl_net, props.ctrl_net_bool, props.sdxl, props.sdxl_bool, props.FreeU, props.lora_id)
+        else:
+            print("using loaded")
 
         print("Generating Image...")
-
         # Define a function to run in the background thread
         def generate_in_background():
-            pipeline = setup_pipeline(props.diffusion_device.lower(), props.diffusion_scheduler, props.sd15,props.sd15_bool,props.ctrl_net,props.ctrl_net_bool, props.sdxl, props.sdxl_bool, props.FreeU, props.lora_id)
+            global pipeline_instance
             generated_image = generate_image(
-                pipe=pipeline,
+                pipe=pipeline_instance,
                 device="cuda" if torch.cuda.is_available() else "cpu",
                 input_image_path=full_path,
                 prompt=props.diffusion_prompt,
@@ -221,10 +244,10 @@ class BlenderDiffusionGenerateOperator(bpy.types.Operator):
                 seed=props.seed
             )
             # try:
-            #     bpy.app.timers.register(lambda: display_image_as_plane(generated_image))
+            #     bpy.app.timers.register(lambda: update_image_in_blender(generated_image))
             # except Exception as e:
             #     print(e)
-            #     display_image_as_plane(generated_image)
+            #     update_image_in_blender(generated_image)
 
         # Start the background thread
         threading.Thread(target=generate_in_background).start()
@@ -371,10 +394,41 @@ def setup_pipeline(device, scheduler, sd15 = "runwayml/stable-diffusion-v1-5", s
         #tends to saturate the pictures a lot! great for stylized outputs
         pipe.enable_freeu(s1=0.9, s2=0.2, b1=1.2, b2=1.4)
     #just making sure xformers kicks in, everyday is a good day for xformers    
+    try:
+        vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", torch_dtype=torch.float16).to("cuda")
+        pipe.set_vae(vae)
+    except Exception as e:
+        print(e)
+
     pipe.enable_xformers_memory_efficient_attention()
     print(pipe)
     return pipe
-       
+
+def generate_image(pipe, device, input_image_path, prompt, negative_prompt, num_inference_steps=20, strength=0.8, guidance_scale=6.5, seed=12345):
+
+    # Load the input image# SEED
+    generator = torch.Generator(device).manual_seed(seed)   
+
+    # InputIMAGE
+    input_image = Image.open(input_image_path).convert("RGB")
+    
+    # GenerateIMAGE
+    with torch.no_grad():
+        image = pipe(
+            prompt=prompt, 
+            negative_prompt=negative_prompt, 
+            image=input_image, 
+            strength=strength, num_inference_steps=num_inference_steps, generator=generator, 
+            guidance_scale=guidance_scale,
+            requires_safety_checker= False,
+        ).images[0]
+        
+    image = ImageOps.flip(image)
+    
+    print("Image generated successfully! yay (❁´◡`❁)")
+    schedule_image_update(image)
+    return image
+
 def generate_animation(device, input_image_path, prompt, negative_prompt, num_inference_steps=20, strength=0.8, guidance_scale=6.5, seed=12345):
 
 #   # Load the motion adapter
@@ -434,31 +488,6 @@ def generate_animation(device, input_image_path, prompt, negative_prompt, num_in
     export_to_video(frames, "animation.mp4", fps=10)
     return frames
 
-
-def generate_image(pipe, device, input_image_path, prompt, negative_prompt, num_inference_steps=20, strength=0.8, guidance_scale=6.5, seed=12345):
-
-    # Load the input image# SEED
-    generator = torch.Generator(device).manual_seed(seed)   
-
-    # InputIMAGE
-    input_image = Image.open(input_image_path).convert("RGB")
-    
-    # GenerateIMAGE
-    with torch.no_grad():
-        image = pipe(
-            prompt=prompt, 
-            negative_prompt=negative_prompt, 
-            image=input_image, 
-            strength=strength, num_inference_steps=num_inference_steps, generator=generator, 
-            guidance_scale=guidance_scale,
-            requires_safety_checker= False,
-        ).images[0]
-        
-    image = ImageOps.flip(image)
-    
-    print("Image generated successfully! yay (❁´◡`❁)")
-    schedule_image_update(image)
-    return image
 def generate_video(device, strength=0.8, seed=12345):
 
     pipe = StableVideoDiffusionPipeline.from_pretrained(
@@ -485,6 +514,8 @@ def generate_video(device, strength=0.8, seed=12345):
     
     print("Video generated successfully! yay (❁´◡`❁)")
     return frames
+
+
 def update_image_in_blender(image_pil, image_name="generated_image"):
     # Convert the PIL Image to a format Blender can use (flattened array of floats)
     image_data = np.array(image_pil.convert("RGBA"))
@@ -512,37 +543,6 @@ def schedule_image_update(image_pil):
     # Schedule the update to run in the main thread
     bpy.app.timers.register(lambda: update_image_in_blender(image_pil))
 
-def display_image_as_plane(image, plane_name="GeneratedImagePlane", material_name="GeneratedImageMaterial"):
-    # Convert PIL Image to bytes
-    image_bytes = image.convert("RGBA").tobytes()
-    
-    # Create a new image in Blender
-    blender_image = bpy.data.images.new(name=plane_name + "Img", width=image.width, height=image.height, alpha=True)
-    blender_image.file_format = 'PNG'
-    blender_image.pixels = [v / 255 for v in image_bytes]
-    
-    # Create a new mesh and object
-    bpy.ops.mesh.primitive_plane_add(size=2, enter_editmode=False, align='WORLD', location=(0, 0, 0), rotation=(0, 0, 180), scale=(-1, 1, 1)), 
-    plane = bpy.context.active_object
-    plane.name = plane_name
-
-    # Create a new material with a Principled BSDF shader
-    mat = bpy.data.materials.new(name=material_name)
-    mat.use_nodes = True
-    bsdf = mat.node_tree.nodes.get('Principled BSDF')
-
-    # Create an image texture node and load the blender image
-    tex_image = mat.node_tree.nodes.new('ShaderNodeTexImage')
-    tex_image.image = blender_image
-
-    # Link the image texture node to the BSDF shader
-    mat.node_tree.links.new(bsdf.inputs['Base Color'], tex_image.outputs['Color'])
-
-    # Assign the material to the plane
-    if plane.data.materials:
-        plane.data.materials[0] = mat
-    else:
-        plane.data.materials.append(mat)
 
 def register():
     bpy.utils.register_class(BlenderDiffusionProperties)
