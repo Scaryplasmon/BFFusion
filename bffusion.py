@@ -95,6 +95,11 @@ class BlenderDiffusionProperties(bpy.types.PropertyGroup):
         description="use_loaded",
         default=False
     ) # type: ignore
+    four_seeds: bpy.props.BoolProperty(
+        name="four_seeds",
+        description="four_seeds",
+        default=False
+    ) # type: ignore
     diffusion_scheduler: bpy.props.EnumProperty(
         name="Scheduler",
         description="Choose the scheduler",
@@ -133,6 +138,13 @@ class BlenderDiffusionProperties(bpy.types.PropertyGroup):
         name="Negative Prompt",
         description="Enter a negative prompt",
         default=""
+    ) # type: ignore
+    batch_size: bpy.props.IntProperty(
+        name="batch_size",
+        description="batch_size",
+        default=1,
+        min=1,
+        max=8
     ) # type: ignore
     num_inference_steps: bpy.props.IntProperty(
         name="Num Inference Steps",
@@ -181,12 +193,14 @@ class BlenderDiffusionPanel(bpy.types.Panel):
         layout.prop(scene, "lora_id")
         layout.prop(scene, "FreeU")
         layout.prop(scene, "use_loaded")
+        layout.prop(scene, "four_seeds")
         layout.prop(scene, "diffusion_scheduler")
         layout.prop(scene, "diffusion_device")
         layout.prop(scene, "diffusion_input_image_path")
         layout.prop(scene, "rendered_image_path")
         layout.prop(scene, "diffusion_prompt")
         layout.prop(scene, "diffusion_neg_prompt")
+        layout.prop(scene, "batch_size")
         layout.prop(scene, "num_inference_steps")
         layout.prop(scene, "strength")
         layout.prop(scene, "guidance_scale")
@@ -229,7 +243,7 @@ class BlenderDiffusionGenerateOperator(bpy.types.Operator):
             print("using loaded")
 
         print("Generating Image...")
-        # Define a function to run in the background thread
+
         def generate_in_background():
             global pipeline_instance
             generated_image = generate_image(
@@ -241,15 +255,11 @@ class BlenderDiffusionGenerateOperator(bpy.types.Operator):
                 num_inference_steps=props.num_inference_steps,
                 strength=props.strength,
                 guidance_scale=props.guidance_scale,
+                batch_size=props.batch_size,
+                four_seeds=props.four_seeds,
                 seed=props.seed
             )
-            # try:
-            #     bpy.app.timers.register(lambda: update_image_in_blender(generated_image))
-            # except Exception as e:
-            #     print(e)
-            #     update_image_in_blender(generated_image)
 
-        # Start the background thread
         threading.Thread(target=generate_in_background).start()
 
         return {'FINISHED'}
@@ -278,7 +288,6 @@ class BlenderDiffusionGenerateAnimationOperator(bpy.types.Operator):
                 seed=props.seed
             )
             filepath = os.path.join(bpy.path.abspath(context.scene.render.filepath), "generated_animation.mp4")
-            # Assuming export_to_video function is defined elsewhere and works correctly
             export_to_video(generated_animation, filepath, fps=7)
             print("Animation saved successfully.", filepath)
         except Exception as e:
@@ -304,7 +313,6 @@ class BlenderDiffusionGenerateVideoOperator(bpy.types.Operator):
         props = context.scene.sd15
         print("Generating Video...")
 
-        # Define a function to run in the background thread
         def generate_video_in_background():
             generated_video = generate_video(
                 device="cuda" if torch.cuda.is_available() else "cpu",
@@ -318,7 +326,6 @@ class BlenderDiffusionGenerateVideoOperator(bpy.types.Operator):
                 export_to_video(generated_video, "generated.mp4", fps=7)
 
         
-        # Start the background thread
         threading.Thread(target=generate_video_in_background).start()
 
         return {'FINISHED'}
@@ -347,7 +354,7 @@ def setup_pipeline(device, scheduler, sd15 = "runwayml/stable-diffusion-v1-5", s
         if ctrl_net_bool == True:
             if ctrl_net != "None":
                 controlnet = ControlNetModel.from_pretrained(ctrl_net, torch_dtype=torch.float16, use_safetensors=True)
-                pipe = StableDiffusionControlNetPipeline.from_pretrained(model_id, controlnet=controlnet, torch_dtype=torch.float16, use_safetensors=True).to(device)
+                pipe = StableDiffusionControlNetPipeline.from_pretrained(model_id, controlnet=controlnet, torch_dtype=torch.float16).to(device)
                 pipe.enable_xformers_memory_efficient_attention()
         else:
             if model_id != "None":          
@@ -404,28 +411,68 @@ def setup_pipeline(device, scheduler, sd15 = "runwayml/stable-diffusion-v1-5", s
     print(pipe)
     return pipe
 
-def generate_image(pipe, device, input_image_path, prompt, negative_prompt, num_inference_steps=20, strength=0.8, guidance_scale=6.5, seed=12345):
+def generate_image(pipe, device, input_image_path, prompt, negative_prompt, num_inference_steps=20, strength=0.8, guidance_scale=6.5, batch_size=1, four_seeds=False, seed=12345):  
 
-    # Load the input image# SEED
-    generator = torch.Generator(device).manual_seed(seed)   
+    images= []
 
     # InputIMAGE
     input_image = Image.open(input_image_path).convert("RGB")
-    
-    # GenerateIMAGE
-    with torch.no_grad():
-        image = pipe(
-            prompt=prompt, 
-            negative_prompt=negative_prompt, 
-            image=input_image, 
-            strength=strength, num_inference_steps=num_inference_steps, generator=generator, 
-            guidance_scale=guidance_scale,
-            requires_safety_checker= False,
-        ).images[0]
-        
-    image = ImageOps.flip(image)
-    
+    if four_seeds == True:
+        prompt = [prompt + t for t in [", highly realistic", ", artsy", ", trending", ", colorful"]]
+        negative_prompt = [negative_prompt + p for p in [", surrealistic", ", bland", ", old", ", B&W"]]
+        for i in range(4):
+            generator = torch.Generator(device).manual_seed(seed + i)
+            with torch.no_grad():
+                temp_image = pipe(
+                    prompt=prompt, 
+                    negative_prompt=negative_prompt, 
+                    image=input_image, 
+                    strength=strength, num_inference_steps=num_inference_steps, generator=generator, 
+                    guidance_scale=guidance_scale,
+                    requires_safety_checker= False,
+                    num_images_per_prompt=batch_size,
+                ).images[0]
+            temp_image = ImageOps.flip(temp_image)
+            images.append(temp_image)
+    elif batch_size > 1:
+        for p in range(batch_size):
+            prompt = [prompt]
+            generator = torch.Generator(device).manual_seed(seed)
+            # GenerateIMAGE
+            with torch.no_grad():
+                batched_image = pipe(
+                    prompt=prompt, 
+                    negative_prompt=negative_prompt, 
+                    image=input_image, 
+                    strength=strength, num_inference_steps=num_inference_steps, generator=generator, 
+                    guidance_scale=guidance_scale,
+                    requires_safety_checker= False,
+                    num_images_per_prompt=batch_size,
+                ).images[0]
+            batched_image = ImageOps.flip(batched_image)
+            images.append(batched_image)
+    else:
+        prompt = [prompt]
+        generator = torch.Generator(device).manual_seed(seed)
+        # GenerateIMAGE
+        with torch.no_grad():
+            image = pipe(
+                prompt=prompt, 
+                negative_prompt=negative_prompt, 
+                image=input_image, 
+                strength=strength, num_inference_steps=num_inference_steps, generator=generator, 
+                guidance_scale=guidance_scale,
+                requires_safety_checker= False,
+            ).images[0]
+        image = ImageOps.flip(image)
+        images.append(image)
+
     print("Image generated successfully! yay (❁´◡`❁)")
+    
+    if four_seeds or batch_size > 1:
+        image = create_image_grid(images, grid_size=(2, 2))
+    else:
+        image = images[0]
     schedule_image_update(image)
     return image
 
@@ -471,7 +518,8 @@ def generate_animation(device, input_image_path, prompt, negative_prompt, num_in
         pipe.load_lora_weights("wangfuyun/AnimateLCM/sd15_lora_beta.safetensors", adapter_name="lcm-lora")
     except:
         print("exception")
-    # enable memory savings
+        
+    # enable memory savings!!!! 
     pipe.enable_vae_slicing()
     pipe.enable_model_cpu_offload()
 
@@ -517,21 +565,18 @@ def generate_video(device, strength=0.8, seed=12345):
 
 
 def update_image_in_blender(image_pil, image_name="generated_image"):
-    # Convert the PIL Image to a format Blender can use (flattened array of floats)
     image_data = np.array(image_pil.convert("RGBA"))
-    image_data = image_data / 255.0  # Normalize to 0-1 range
-    flat_image_data = image_data.ravel()  # Flatten the array
+    image_data = image_data / 255.0 
+    flat_image_data = image_data.ravel()
 
-    # Check if an image with the desired name already exists
     if image_name in bpy.data.images:
         bpy.data.images[image_name].name = "old_" + image_name  # Rename the old image
 
-    # Create a new image or update the existing one
     image = bpy.data.images.new(name=image_name, width=image_pil.width, height=image_pil.height)
     image.pixels = list(flat_image_data)
     image.update()
 
-    # Automatically display this image in the Image Editor
+
     for area in bpy.context.screen.areas:
         if area.type == 'IMAGE_EDITOR':
             for space in area.spaces:
@@ -540,9 +585,17 @@ def update_image_in_blender(image_pil, image_name="generated_image"):
     print("Image updated")
 
 def schedule_image_update(image_pil):
-    # Schedule the update to run in the main thread
     bpy.app.timers.register(lambda: update_image_in_blender(image_pil))
 
+def create_image_grid(images, grid_size=(2, 2)):
+    print("Combining images into a grid.")
+    width, height = images[0].size
+    grid = Image.new('RGB', (width * grid_size[0], height * grid_size[1]))
+    for index, image in enumerate(images):
+        x = index % grid_size[0] * width
+        y = index // grid_size[0] * height
+        grid.paste(image, (x, y))
+    return grid
 
 def register():
     bpy.utils.register_class(BlenderDiffusionProperties)
