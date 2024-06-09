@@ -1,23 +1,56 @@
-# Bffusion
-Integrating diffusers functionalities in Blender
+# BFFusion
+Integrating Diffusers Functionalities in Blender
 
-![GPffusion - Made with Clipchamp](https://github.com/Scaryplasmon/BFFusion/assets/90010990/6811cb2b-6c24-4605-b220-a339313b9188)
-![GPffusion2](https://github.com/Scaryplasmon/BFFusion/assets/90010990/26c8dc00-8ad6-42c0-a6d6-e672ded3e637)
+## Inference Time
+- Less than 1 second
 
--GPFFusion (❁´◡`❁)
+<video src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/120d83ee-7567-483a-ae0b-4c79310c6a58" width="400" controls></video>
+<video src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/bf9840dc-7b47-4dfc-8efd-7d9ffd57c4f8" width="400" controls></video>
 
-inference time ~ 2s
-![image](https://github.com/Scaryplasmon/Bfusion/assets/90010990/727d9a1d-44eb-4d1f-822e-56469499d2eb)
--BFFusion (●'◡'●)
+## Features
 
-inference time ~ depends on the model
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/3f5ca57d-f7b0-43e1-9245-22876df00290" width="400">
 
--just copy paste whatever Lora u would like to use
-![image](https://github.com/Scaryplasmon/Bfusion/assets/90010990/b9eda08d-3cb0-4507-9d80-e056fea57d2a)
-![image](https://github.com/Scaryplasmon/Bfusion/assets/90010990/b2641abf-4a15-49db-a1df-478f138dc756)
-![image](https://github.com/Scaryplasmon/Bfusion/assets/90010990/1c0ff763-4a47-4f12-84cd-ffb90834499a)
-![image](https://github.com/Scaryplasmon/Bfusion/assets/90010990/da779b97-4b6a-45fe-a24d-3f411aaf4885)
-![image](https://github.com/Scaryplasmon/Bfusion/assets/90010990/b48c1446-75b1-41ff-872d-45b29bd5c4ff)
+### BFFusion (●'◡'●)
 
+#### Blender Scene
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/30ceb5cc-85d5-4d0d-bfff-e718fec2beb0" width="400">
 
-timing based on an nvidia RTX 4070 12GB gpu
+#### Img2Img
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/89756170-4e4e-4f75-9632-cf97b549f65c" width="400">
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/4421f19a-f94e-4e5d-95c6-74bb07875248" width="400">
+
+#### ctrl_net:
+
+-canny
+
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/8dd29056-f63e-4bc0-90d5-cd0269165e67" width="400">
+
+-depth
+
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/d9b99a33-96f3-426f-90d3-4f538eec2386" width="400">
+
+-normal
+
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/a9df95f9-b07d-4d8d-ae78-5bcde74753aa" width="400">
+
+++
+
+### GPFFusion (❁´◡`❁)
+
+#### Render
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/f3d863f5-9b17-4d58-9f0b-b03828a0765a" width="200">
+
+#### outputs with different Loras and combinations
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/14c10029-c8a2-491c-a780-9b9d5bbbe851" width="300">
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/4be9c7fb-85d9-470c-aa72-4be02f7d44bd" width="300">
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/91521ca4-69a3-40fb-b30e-ff51b322d4bb" width="300">
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/e5ed91bb-da46-49e6-9fb7-2be16db0eb39" width="300">
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/4fc8cffd-efe5-4673-9cdc-149e35178ac1" width="300">
+<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/d2db1fe9-a89c-47f7-beb0-8444c13ceea3" width="300">
+
+## Performance
+- Timing based on an NVIDIA RTX 4070 12GB GPU
+
+## Integrated using the diffusers docs
+https://huggingface.co/docs/diffusers/v0.27.2/en/index
