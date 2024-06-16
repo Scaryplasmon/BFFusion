@@ -593,9 +593,9 @@ def generate_image(pipe, device, input_image_path, prompt, negative_prompt, num_
 
 def generate_animation(device, input_image_path, prompt, negative_prompt, num_inference_steps=20, strength=0.8, guidance_scale=6.5, seed=12345, FPS=10, model_id="stablediffusionapi/anything-v5"):
 
-#    adapter = MotionAdapter.from_pretrained("guoyww/animatediff-motion-adapter-v1-5-2", torch_dtype=torch.float16)
+    adapter = MotionAdapter.from_pretrained("guoyww/animatediff-motion-adapter-v1-5-2", torch_dtype=torch.float16)
 
-    adapter = MotionAdapter.from_pretrained("wangfuyun/AnimateLCM")
+    # adapter = MotionAdapter.from_pretrained("wangfuyun/AnimateLCM")
 
     pipe = AnimateDiffVideoToVideoPipeline.from_pretrained(model_id, motion_adapter=adapter, torch_dtype=torch.float16).to("cuda")
     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config, beta_schedule="linear")
@@ -633,7 +633,7 @@ def generate_animation(device, input_image_path, prompt, negative_prompt, num_in
     # enable memory savings!!!! 
     pipe.enable_vae_slicing()
     pipe.enable_model_cpu_offload()
-    pipe.enable_xformers_memory_efficient_attention()
+    # pipe.enable_xformers_memory_efficient_attention()
     # start inference
     start_time = time.time()
     output = pipe(

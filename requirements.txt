@@ -1,0 +1,8 @@
+transformers
+diffusers
+xformers
+requests
+numpy
+opencv
+controlnet_hinter
+threading
