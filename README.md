@@ -47,18 +47,7 @@ Inference Time
 <img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/19fd4a08-5eb4-422b-a24d-dde7a0e7dc32" width="400">
 <img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/9df82af0-fb62-4868-b2e2-4766005cb5df" width="400">
 
-#### Render
-<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/f3d863f5-9b17-4d58-9f0b-b03828a0765a" width="200">
-
-#### outputs with different Loras and combinations
-<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/14c10029-c8a2-491c-a780-9b9d5bbbe851" width="250">
-<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/4be9c7fb-85d9-470c-aa72-4be02f7d44bd" width="250">
-<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/d2db1fe9-a89c-47f7-beb0-8444c13ceea3" width="250">
-<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/91521ca4-69a3-40fb-b30e-ff51b322d4bb" width="250">
-<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/e5ed91bb-da46-49e6-9fb7-2be16db0eb39" width="250">
-<img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/4fc8cffd-efe5-4673-9cdc-149e35178ac1" width="250">
-
-### AnimFFusion (❁´◡`❁)
+### AnimFFusion ᓚᘏᗢ
 The addon supports also video generation from video inputs, but it´s still limited and currently in development.
 
 <video src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/6835dc62-6916-4320-b649-f5f1164ccfea" width="400" controls></video>
