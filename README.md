@@ -11,6 +11,16 @@ Inference Time
 
 ## Features
 
+-Rendered Image or Animation Conditioning
+
+-Lora and CheckPoints
+
+-ControlNet Pipeline
+
+-Noise, CFG, Sampler, Schedulers ... the usual
+
+just copy paste any path model from [hf](https://huggingface.co/models?other=base_model:runwayml/stable-diffusion-v1-5) 
+
 <img src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/3f5ca57d-f7b0-43e1-9245-22876df00290" width="400">
 
 ### BFFusion (●'◡'●)
