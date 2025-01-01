@@ -3,6 +3,9 @@
 
 ## Integrating diffusers Functionalities within Blender
 
+
+
+<video src="https://github.com/user-attachments/assets/90889341-f241-4c11-82f1-2510a92cb40e" width="400" controls></video>
 <video src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/120d83ee-7567-483a-ae0b-4c79310c6a58" width="400" controls></video>
 <video src="https://github.com/Scaryplasmon/BFFusion/assets/90010990/bf9840dc-7b47-4dfc-8efd-7d9ffd57c4f8" width="400" controls></video>
 Inference Time
